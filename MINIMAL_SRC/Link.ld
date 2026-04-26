@@ -171,8 +171,6 @@ SECTIONS
 		PROVIDE( _ebss = .);
 	} >RAM AT>FLASH
 
-	_dataEnd = (. + 3) & ~ 4;
-
 	PROVIDE( _end = _ebss);
 	PROVIDE( end = . );
 

@@ -2,8 +2,10 @@
 CC      = riscv-none-elf-gcc
 OBJCOPY = riscv-none-elf-objcopy
 
-# Target
-TARGET = USART_Printf
+# Targets
+EXAMPLE = USART_Printf
+
+FORTH = Forth
 
 # ===== Select startup file here =====
 # Options: D6, D8, D8W
@@ -23,35 +25,49 @@ LIBRARY_INCLUDES = \
 	-ISRC/Core \
 	-ISRC/Debug \
 	-ISRC/Peripheral/inc
+	
 
-EXAMPLE_INCLUDES = -IUSART_Printf/User
+EXAMPLE_INCLUDES = $(LIBRARY_INCLUDES) -IUSART_Printf/User
 
-INCLUDES = $(LIBRARY_INCLUDES) $(EXAMPLE_INCLUDES)
-
+INCLUDES = $(EXAMPLE_INCLUDES)
 # Source files
+
+# full library
 LIBRARY_C = \
 	$(wildcard SRC/Core/*.c) \
 	$(wildcard SRC/Debug/*.c) \
 	$(wildcard SRC/Peripheral/src/*.c) \
-	
-EXAMPLE_C = $(wildcard USART_Printf/User/*.c)
+	$(STARTUP_FILE) \
 
-SRC_C = $(LIBRARY_C) $(EXAMPLE_C)
+# example
+EXAMPLE_C = $(wildcard USART_Printf/User/*.c)  $(LIBRARY_C)
+EXAMPLE_S := $(wildcard USART_Printf/User/*.S USART_Printf/User/*.s) 
 
-SRC_S = $(STARTUP_FILE)
+EXAMPLE_SRCS = $(EXAMPLE_C) $(EXAMPLE_S)
 
-SRCS = $(SRC_C) $(SRC_S)
+# minimal src
+MINMAL_SRCS = $(wildcard MINIMAL_SRC/*.S) $(STARTUP_FILE) 
+
+# forth
+FORTH_SRCS = $(wildcard Forth/*.S) $(MINMAL_SRCS)
 
 # Object files
-OBJS = $(SRCS:.c=.o)
-OBJS := $(OBJS:.S=.o)
+EXAMPLE_OBJS = $(EXAMPLE_SRCS:.c=.o)
+EXAMPLE_OBJS := $(EXAMPLE_OBJS:.S=.o)
+
+FORTH_OBJS = $(FORTH_SRCS:.S=.o)
 
 # Default target
-all: $(TARGET).elf
+all: $(EXAMPLE).elf $(FORTH).elf
 
 # Link
-$(TARGET).elf: $(OBJS)
-	$(CC) $(CFLAGS) $(LDFLAGS) $(OBJS) -o $@ 
+$(EXAMPLE).elf: $(EXAMPLE_OBJS)
+	$(CC) $(CFLAGS) $(LDFLAGS) $(EXAMPLE_OBJS) -o $@ 
+
+
+$(FORTH).elf: $(FORTH_OBJS)
+	$(CC) $(CFLAGS) $(LDFLAGS) $(FORTH_OBJS) -o $@ 
+
 
 # Compile C
 %.o: %.c
@@ -62,11 +78,14 @@ $(TARGET).elf: $(OBJS)
 	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
 # Binary output (optional)
-$(TARGET).bin: $(TARGET).elf
+$(EXAMPLE).bin: $(EXAMPLE).elf
+	$(OBJCOPY) -O binary $< $@
+
+$(FORTH).bin: $(FORTH).elf
 	$(OBJCOPY) -O binary $< $@
 
 # Clean
 clean:
-	rm -f $(OBJS) $(TARGET).elf $(TARGET).bin $(TARGET).map
+	rm -f $(EXAMPLE_OBJS) $(EXAMPLE).elf $(EXAMPLE).bin $(EXAMPLE).map $(FORTH_OBJS) $(FORTH).elf $(FORTH).bin $(FORTH).map
 
 .PHONY: all clean
