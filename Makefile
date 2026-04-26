@@ -58,7 +58,7 @@ EXAMPLE_OBJS := $(EXAMPLE_OBJS:.S=.o)
 FORTH_OBJS = $(FORTH_SRCS:.S=.o)
 
 # Default target
-all: $(EXAMPLE).elf $(FORTH).elf
+all: $(EXAMPLE).elf #$(FORTH).elf
 
 # Link
 $(EXAMPLE).elf: $(EXAMPLE_OBJS)

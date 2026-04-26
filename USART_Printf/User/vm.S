@@ -62,6 +62,63 @@
 .global modulo_impl
 .global forth_mul_impl
 
+
+.global emit
+.global key
+.global loadCell
+.global store
+.global loadByte
+.global storeByte
+.global branchIfZero
+.global branch
+.global forth_add
+.global literal
+.global dup
+.global return
+.global forth_minus
+.global swap
+.global drop
+.global dup2
+.global findXT
+.global doWordFound
+.global flags
+.global setCompile
+.global setInterpret
+.global forth_and
+.global forth_or
+.global get_compile_bit
+.global forth_xor
+.global get_comment_bit
+.global comment_on
+.global comment_off
+.global here
+.global rot
+.global push_return
+.global pop_return
+.global forth_fatoi
+.global show
+.global execute
+.global showR
+.global setHere
+.global return_stack_index
+.global getDictionaryEnd
+.global setDictionaryEnd
+.global tokenBufferToHeaderCode
+.global toCString
+.global compileWord
+.global endWord
+.global getXTHeader
+.global isXTImmediate
+.global setNumInputHex
+.global setNumInputDec
+.global equals
+.global notEquals
+.global lessThan
+.global greaterThan
+.global modulo
+.global forth_mul
+
+
 .global last_vm_word
 
 #define VM_STACK_BOUNDS_CHECK
@@ -83,20 +140,22 @@
 .global vm_run
 
 .section .bss
+.balign 4
+
 vm_flags: .word 0
 
-vm_data_stack: .fill DATA_STACK_MAX_SIZE, CELL_SIZE, 0      # 32 cell stack size
-vm_return_stack: .fill RETURN_STACK_MAX_SIZE, CELL_SIZE, 0  # 64 cell return stack size
+vm_data_stack: .zero DATA_STACK_MAX_SIZE * CELL_SIZE      # 32 cell stack size
+vm_return_stack: .zero RETURN_STACK_MAX_SIZE * CELL_SIZE  # 64 cell return stack size
 
-vm_scratch_pad: .fill 64, 1, 0
-
-
-.section .text
+vm_scratch_pad: .zero 64
 
 # dictionary
 vm_p_dictionary_start: .word 0
 vm_p_dictionary_end: .word 0
 vm_str_error_message: .word 0
+
+.section .text
+
 
 
 starting_interpreter_string: .ascii "starting outer interpreter...\n\r\0"
@@ -114,7 +173,7 @@ show_stack_end_str:          .ascii " ]\n\0"
 
 title_string: .string "Risc V Forth\n"
 
-.align 4
+.balign 4
 
 vm_error_handler:
     li a1, UART_BASE
@@ -159,6 +218,15 @@ find_dict_end:
     RestoreReturnAddress
     ret
 
+data_stack_base: .ascii "data stack base: \0"
+return_stack_base: .ascii "return stack base: \0"
+instruction_ptr: .ascii "instruction ptr: \0"
+mem_end: .ascii "memory end: \0"
+dict_end: .ascii "dict end: \0"
+
+linened: .ascii "\n\r\0"
+.balign 4
+
 vm_run:
     SaveReturnAddress
 
@@ -179,7 +247,9 @@ vm_run:
     call find_dict_end
 
     la t0, vm_p_dictionary_end
+    
     sw a1, 0(t0)
+    
 
     # init stacks
     la s1, vm_data_stack
@@ -187,11 +257,65 @@ vm_run:
     la s3, vm_return_stack
     li s4, 0
 
+    
+
     la s5, _dataEnd
 # 1:
 #     j 1b
 
     la s0, outerInterpreter_impl
+
+    # DEBUG - PRINT IMPORTANT VM VARS
+    la a0, data_stack_base
+    la a1, UART_BASE
+    call puts
+    mv a0, s1
+    call print_int
+    la a0, linened
+    la a1, UART_BASE
+    call puts
+
+    la a0, return_stack_base
+    la a1, UART_BASE
+    call puts
+    mv a0, s3
+    call print_int
+    la a0, linened
+    la a1, UART_BASE
+    call puts
+
+    la a0, instruction_ptr
+    la a1, UART_BASE
+    call puts
+    mv a0, s0
+    call print_int
+    la a0, linened
+    la a1, UART_BASE
+    call puts
+
+    la a0, mem_end
+    la a1, UART_BASE
+    call puts
+    mv a0, s5
+    call print_int
+    la a0, linened
+    la a1, UART_BASE
+    call puts
+
+    
+    la a0, dict_end
+    la a1, UART_BASE
+    call puts
+    la t0, vm_p_dictionary_end
+    lw t0, 0(t0)
+    mv a0, t0
+    call print_int
+    la a0, linened
+    la a1, UART_BASE
+    call puts
+
+    # DEBUG END
+    
     call outerInterpreter_impl
 
     RestoreReturnAddress
@@ -395,7 +519,7 @@ word_header forth_fatoi, "$", 0, show, pop_return
 # Its good to have this one NOT in forth, because you can rely on it working correctly more
 # knowing that its not part of the forth system and it is very useful for debugging. There is just
 # less things to go wrong this way.
-word_header show, "show", 0, execute, forth_fatoi
+word_header show, "s", 0, execute, forth_fatoi
     # DATA STACK
     la a0, show_data_stack_begin_str
     li a1, UART_BASE

@@ -21,7 +21,7 @@
 .global popReturnStr__impl
 .global addStr__impl
 .global twodupStr__impl
-.global equalsStr__implOBJS
+.global equalsStr__impl
 .global dropStr__impl
 .global setCompile_impl
 .global setInterpret_impl
@@ -65,213 +65,272 @@
 .global until_impl
 .global do_impl
 .global loop_impl
+
+.global setCompile_ThreadBegin
+.global setInterpret_ThreadBegin
+.global get_compile_bit_ThreadBegin
+.global i_ThreadBegin
+.global j_ThreadBegin
+.global print_ThreadBegin
+.global logic_and_ThreadBegin
+.global logic_or_ThreadBegin
+.global logic_not_ThreadBegin
+.global gte_ThreadBegin
+.global lte_ThreadBegin
+.global isCharNumeric_ThreadBegin
+.global isStringValidNumber_ThreadBegin
+.global getHeaderNext_ThreadBegin
+.global getHeaderPrev_ThreadBegin
+.global setHeaderPrev_ThreadBegin
+.global setHeaderNext_ThreadBegin
+.global setHeaderImmediate_ThreadBegin
+.global getHeaderImmediate_ThreadBegin
+.global getXTHeader_ThreadBegin
+.global getXTImmediate_ThreadBegin
+.global tokenBufferToHeaderCode_ThreadBegin
+.global cw_ThreadBegin
+.global cbyte_ThreadBegin
+.global doToken_ThreadBegin
+.global seekTokenStart_ThreadBegin
+.global loadToken_ThreadBegin
+.global loadNextToken_ThreadBegin
+.global eval__ThreadBegin
+.global doBackspace_ThreadBegin
+.global outerInterpreter_ThreadBegin
+.global compileHeader_ThreadBegin
+.global alignHere_ThreadBegin
+.global bw_ThreadBegin
+.global ew_ThreadBegin
+.global if_ThreadBegin
+.global else_ThreadBegin
+.global then_ThreadBegin
+.global begin_ThreadBegin
+.global until_ThreadBegin
+.global do_ThreadBegin
+.global loop_ThreadBegin
+
 .global first_system_word
 .include "VmMacros.S"
 .altmacro
+
+.section .bss
+
+.balign 4
+LineBuffer__data:
+    .zero 128
+.balign 4
+LineBufferSize__data:
+    .word 0
+
+.balign 4
+Tokenbuffer__data:
+    .zero 128
+
+.balign 4
+TokenBufferSize__data:
+    .word 0
+
+.balign 4
+LineBufferI__data:
+    .word 0
+
+.balign 4
+EvalErrorFlag__data:
+    .word 0
+
+.balign 4
+flags_data:
+    .word 0
+
 .section .text
 first_system_word:
 
 
 word_header LineBuffer_, "LineBuffer_", 0, LineBufferSize_, last_vm_word
-    la t1, LineBuffer__data
+    lui t1, %hi(LineBuffer__data)
+    addi t1, t1, %lo(LineBuffer__data)
     PushDataStack t1
     end_word
-.section .data
-LineBuffer__data:
-    .fill 128, 1, 0
-.section .text
-
 
 word_header LineBufferSize_, "LineBufferSize_", 0, Tokenbuffer_, LineBuffer_
-    la t1, LineBufferSize__data
+    lui t1, %hi(LineBufferSize__data)
+    addi t1, t1, %lo(LineBufferSize__data)
     PushDataStack t1
     end_word
-.section .data
-LineBufferSize__data:
-    .word 0
-.section .text
-
 
 word_header Tokenbuffer_, "Tokenbuffer_", 0, TokenBufferSize_, LineBufferSize_
-    la t1, Tokenbuffer__data
+    lui t1, %hi(Tokenbuffer__data)
+    addi t1, t1, %lo(Tokenbuffer__data)
     PushDataStack t1
     end_word
-.section .data
-Tokenbuffer__data:
-    .fill 32, 1, 0
-.section .text
-
 
 word_header TokenBufferSize_, "TokenBufferSize_", 0, LineBufferI_, Tokenbuffer_
-    la t1, TokenBufferSize__data
+    lui t1, %hi(TokenBufferSize__data)
+    addi t1, t1, %lo(TokenBufferSize__data)
     PushDataStack t1
     end_word
-.section .data
-TokenBufferSize__data:
-    .word 0
-.section .text
 
 
 word_header LineBufferI_, "LineBufferI_", 0, EvalErrorFlag_, TokenBufferSize_
-    la t1, LineBufferI__data
+    lui t1, %hi(LineBufferI__data)
+    addi t1, t1, %lo(LineBufferI__data)
     PushDataStack t1
     end_word
-.section .data
-LineBufferI__data:
-    .word 0
-.section .text
-
 
 word_header EvalErrorFlag_, "EvalErrorFlag_", 0, flags, LineBufferI_
-    la t1, EvalErrorFlag__data
+    lui t1, %hi(EvalErrorFlag__data)
+    addi t1, t1, %lo(EvalErrorFlag__data)
     PushDataStack t1
     end_word
-.section .data
-EvalErrorFlag__data:
-    .word 0
-.section .text
-
 
 word_header flags, "flags", 0, LiteralStr_, EvalErrorFlag_
-    la t1, flags_data
+    lui t1, %hi(flags_data)
+    addi t1, t1, %lo(flags_data)
     PushDataStack t1
     end_word
-.section .data
-flags_data:
-    .word 0
-.section .text
-
 
 word_header LiteralStr_, "LiteralStr_", 0, ReturnStr_, flags
     li t1, 7
     PushDataStack t1
-    la t1, LiteralStr__data
+    lui t1, %hi(LiteralStr__data)
+    addi t1, t1, %lo(LiteralStr__data)
     PushDataStack t1
     end_word
 LiteralStr__data:
     .ascii "literal"
-    .align 4
+    .balign 4
 
 
 word_header ReturnStr_, "ReturnStr_", 0, UnknownTokenStartStr_, LiteralStr_
     li t1, 1
     PushDataStack t1
-    la t1, ReturnStr__data
+    lui t1, %hi(ReturnStr__data)
+    addi t1, t1, %lo(ReturnStr__data)
     PushDataStack t1
     end_word
 ReturnStr__data:
     .ascii "r"
-    .align 4
+    .balign 4
 
 
 word_header UnknownTokenStartStr_, "UnknownTokenStartStr_", 0, UnknownTokenEndStr_, ReturnStr_
     li t1, 14
     PushDataStack t1
-    la t1, UnknownTokenStartStr__data
+    lui t1, %hi(UnknownTokenStartStr__data)
+    addi t1, t1, %lo(UnknownTokenStartStr__data)
     PushDataStack t1
     end_word
 UnknownTokenStartStr__data:
     .ascii "unknowntoken:'"
-    .align 4
+    .balign 4
 
 
 word_header UnknownTokenEndStr_, "UnknownTokenEndStr_", 0, branch0TokenStr_, UnknownTokenStartStr_
     li t1, 3
     PushDataStack t1
-    la t1, UnknownTokenEndStr__data
+    lui t1, %hi(UnknownTokenEndStr__data)
+    addi t1, t1, %lo(UnknownTokenEndStr__data)
     PushDataStack t1
     end_word
 UnknownTokenEndStr__data:
     .ascii "'\n"
-    .align 4
+    .balign 4
 
 
 word_header branch0TokenStr_, "branch0TokenStr_", 0, branchTokenStr_, UnknownTokenEndStr_
     li t1, 2
     PushDataStack t1
-    la t1, branch0TokenStr__data
+    lui t1, %hi(branch0TokenStr__data)
+    addi t1, t1, %lo(branch0TokenStr__data)
     PushDataStack t1
     end_word
 branch0TokenStr__data:
     .ascii "b0"
-    .align 4
+    .balign 4
 
 
 word_header branchTokenStr_, "branchTokenStr_", 0, pushReturnStr_, branch0TokenStr_
     li t1, 1
     PushDataStack t1
-    la t1, branchTokenStr__data
+    lui t1, %hi(branchTokenStr__data)
+    addi t1, t1, %lo(branchTokenStr__data)
     PushDataStack t1
     end_word
 branchTokenStr__data:
     .ascii "b"
-    .align 4
+    .balign 4
 
 
 word_header pushReturnStr_, "pushReturnStr_", 0, popReturnStr_, branchTokenStr_
     li t1, 2
     PushDataStack t1
-    la t1, pushReturnStr__data
+    lui t1, %hi(pushReturnStr__data)
+    addi t1, t1, %lo(pushReturnStr__data)
     PushDataStack t1
     end_word
 pushReturnStr__data:
     .ascii ">R"
-    .align 4
+    .balign 4
 
 
 word_header popReturnStr_, "popReturnStr_", 0, addStr_, pushReturnStr_
     li t1, 2
     PushDataStack t1
-    la t1, popReturnStr__data
+    lui t1, %hi(popReturnStr__data)
+    addi t1, t1, %lo(popReturnStr__data)
     PushDataStack t1
     end_word
 popReturnStr__data:
     .ascii "<R"
-    .align 4
+    .balign 4
 
 
 word_header addStr_, "addStr_", 0, twodupStr_, popReturnStr_
     li t1, 1
     PushDataStack t1
-    la t1, addStr__data
+    lui t1, %hi(addStr__data)
+    addi t1, t1, %lo(addStr__data)
     PushDataStack t1
     end_word
 addStr__data:
     .ascii "+"
-    .align 4
+    .balign 4
 
 
 word_header twodupStr_, "twodupStr_", 0, equalsStr_, addStr_
     li t1, 4
     PushDataStack t1
-    la t1, twodupStr__data
+    lui t1, %hi(twodupStr__data)
+    addi t1, t1, %lo(twodupStr__data)
     PushDataStack t1
     end_word
 twodupStr__data:
     .ascii "2dup"
-    .align 4
+    .balign 4
 
 
 word_header equalsStr_, "equalsStr_", 0, dropStr_, twodupStr_
     li t1, 1
     PushDataStack t1
-    la t1, equalsStr__data
+    lui t1, %hi(equalsStr__data)
+    addi t1, t1, %lo(equalsStr__data)
     PushDataStack t1
     end_word
 equalsStr__data:
     .ascii "="
-    .align 4
+    .balign 4
 
 
 word_header dropStr_, "dropStr_", 0, setCompile, equalsStr_
     li t1, 4
     PushDataStack t1
-    la t1, dropStr__data
+    lui t1, %hi(dropStr__data)
+    addi t1, t1, %lo(dropStr__data)
     PushDataStack t1
     end_word
 dropStr__data:
     .ascii "drop"
-    .align 4
+    .balign 4
 
 
 word_header setCompile, "setCompile", 0, setInterpret, dropStr_

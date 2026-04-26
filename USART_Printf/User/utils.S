@@ -8,13 +8,17 @@
 .global fatoi
 .global itofa
 .global forth_string_to_c
+.global print_int
+.section .bss
 
-.section .data
-
-itofa_hex_LUT: .ascii "0123456789abcdef"
+.balign 4
+scratch_pad: .zero 32
 
 .section .text
 .include "defines.S"
+itofa_hex_LUT: .ascii "0123456789abcdef"
+
+.balign 4
 
 print_forth_string:
     # Args:
@@ -204,6 +208,7 @@ c_fs_notequal:
 fatoi_error_msg: .ascii "fatoi error\n\0"
 fatoi_error_msg_malformed: .ascii "fatoi error malformed string. '-' must be at end\n\0"
 fatoi_error_msg_invalid: .ascii "fatoi error invalid chars\n\0"
+.balign 4
 
 fatoi:
     # Args:
@@ -375,7 +380,6 @@ itofa_hex:
     add t0, t0, t2
     lb t0, 0(t0)
     sb t0, 9(a1)
-
     sb zero, 10(a1)
 
     RestoreReturnAddress
@@ -454,4 +458,18 @@ forth_string_to_c:
     add t0, t2, t4
     sb zero, 0(t0)
     #RestoreReturnAddress
+    ret
+
+# convenience function to print an integer as hex
+print_int:
+    # Args:
+    # a0: int to print
+    SaveReturnAddress
+    la a1, scratch_pad
+    li a2, 32
+    call itofa_hex
+    li a1, UART_BASE
+    la a0, scratch_pad
+    call puts
+    RestoreReturnAddress
     ret

@@ -89,6 +89,7 @@ div \regOut, \regSize, \regTemp
 # }
 
 .macro word_header_unitialised name, code, immediate
+    .balign 4
 \name:
     #padded_string \code, HEADER_CODE_BUF_SIZE
 1:
@@ -108,6 +109,7 @@ div \regOut, \regSize, \regTemp
 .endm
 
 .macro word_header_last name, code, immediate, prev
+    .balign 4
 \name:
     padded_string \code, HEADER_CODE_BUF_SIZE
     .word 0
@@ -118,6 +120,7 @@ div \regOut, \regSize, \regTemp
 
 
 .macro word_header_first name, code, immediate, next
+    .balign 4
 \name:
     padded_string \code, HEADER_CODE_BUF_SIZE
     .word \next
@@ -127,6 +130,7 @@ div \regOut, \regSize, \regTemp
 .endm
 
 .macro word_header name, code, immediate, next, prev
+    .balign 4
 \name:
     #padded_string \code, HEADER_CODE_BUF_SIZE
 1:
@@ -146,10 +150,16 @@ div \regOut, \regSize, \regTemp
 .endm
 
 .macro secondary_word name
+    .balign 4
     PushReturnStack s0
     la s0, \name\()_ThreadBegin
     lw t0, 0(s0)
+    mv a0, t0
+    PushReg t0
+    call print_int
+    PopReg t0
     jalr ra, t0, 0
+    .balign 4
 \name\()_ThreadBegin:
 .endm
 
@@ -174,6 +184,8 @@ div \regOut, \regSize, \regTemp
 .macro word_code regPtrHeader, regPtrOut
     addi \regPtrOut, \regPtrHeader, OFFSET_CODE
 .endm
+
+
 
 .macro end_word
     addi s0, s0, CELL_SIZE

@@ -1,5 +1,4 @@
-
-
+.equ UART_BASE2, 0x40004400
 .equ CELL_SIZE, 4
 .equ DATA_STACK_MAX_SIZE, 32
 .equ RETURN_STACK_MAX_SIZE, 64
@@ -89,7 +88,7 @@ div \regOut, \regSize, \regTemp
 # }
 
 .macro word_header_unitialised name, code, immediate
-    .align 4
+    .balign 4
 \name:
     #padded_string \code, HEADER_CODE_BUF_SIZE
 1:
@@ -109,7 +108,7 @@ div \regOut, \regSize, \regTemp
 .endm
 
 .macro word_header_last name, code, immediate, prev
-    .align 4
+    .balign 4
 \name:
     padded_string \code, HEADER_CODE_BUF_SIZE
     .word 0
@@ -120,17 +119,18 @@ div \regOut, \regSize, \regTemp
 
 
 .macro word_header_first name, code, immediate, next
-    .align 4
+    .balign 4
 \name:
     padded_string \code, HEADER_CODE_BUF_SIZE
     .word \next
     .word 0
     .word \immediate
+    .balign 4
 \name\()_impl:
 .endm
 
 .macro word_header name, code, immediate, next, prev
-    .align 4
+    .balign 4
 \name:
     #padded_string \code, HEADER_CODE_BUF_SIZE
 1:
@@ -146,15 +146,23 @@ div \regOut, \regSize, \regTemp
     .word \next
     .word \prev
     .word \immediate
+    .balign 4
 \name\()_impl:
 .endm
 
 .macro secondary_word name
     PushReturnStack s0
     la s0, \name\()_ThreadBegin
-    lw t0, 0(s0)
-    jalr ra, t0, 0
-    .align 4
+    lw t4, 0(s0)
+    # DEBUG TRACE CODE BEGIN
+    mv a0, t4
+    call print_int
+    la a0, linened2
+    li a1, UART_BASE2
+    call puts
+    # DEBUG TRACE CODE END
+    jalr ra, t4, 0
+    .balign 4
 \name\()_ThreadBegin:
 .endm
 
@@ -184,8 +192,15 @@ div \regOut, \regSize, \regTemp
 
 .macro end_word
     addi s0, s0, CELL_SIZE
-    lw t0, 0(s0)
-    jalr ra, t0, 0
+    lw t4, 0(s0)
+    # DEBUG TRACE CODE BEGIN
+    mv a0, t4
+    call print_int
+    la a0, linened2
+    li a1, UART_BASE2
+    call puts
+    # DEBUG TRACE CODE END
+    jalr ra, t4, 0
 .endm
 
 # Following 2 macros used to calculate branch labels within pre-compiled secondary words
@@ -198,3 +213,8 @@ div \regOut, \regSize, \regTemp
     # ASSUMES THAT 1b IS A LABEL TO THE BRANCH OR BRANCHZERO IMPLEMENTATION POINTER
     .word (( \label - 1b) - 1 * CELL_SIZE)
 .endm
+
+.text
+linened2: .ascii "\n\r\0"
+
+.balign 4
