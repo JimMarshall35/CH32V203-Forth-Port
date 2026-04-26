@@ -1,4 +1,8 @@
-# Adafruit-QT-Py-CH32V203-Makefile-Example
-usart printf example at https://github.com/openwch/ch32v20x ported to a makefile, adapted for Adafruit-QT-Py-CH32V203 board.
+# Port of Risc-v forth to real hardware
 
-I use build it with an [xpack](https://xpack-dev-tools.github.io/riscv-none-elf-gcc-xpack/) distributed riscv toolchain.
+Attempting to port this code:
+
+https://github.com/JimMarshall35/riscv-forth
+
+To real hardware.
+When it is all working I will move the qemu build of the code to this repo too and delete the old one
