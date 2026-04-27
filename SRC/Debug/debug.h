@@ -38,6 +38,8 @@ extern "C" {
 #define SDI_PRINT   SDI_PR_CLOSE
 #endif
 
+#define RAM_END 0x20002000
+#define UART_BASE_CDEF 0x40004400
 
 void Delay_Init(void);
 void Delay_Us(uint32_t n);

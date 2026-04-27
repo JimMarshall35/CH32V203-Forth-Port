@@ -324,6 +324,7 @@ asm_name cbyte
     dup getDictionaryEnd swap setHeaderPrev
     dup getDictionaryEnd setHeaderNext
     dup 0 swap setHeaderNext
+    dup 0 swap setHeaderImmediate
 ;
 
 : alignHere ( alignment -- )
@@ -342,15 +343,18 @@ asm_name cbyte
     4 alignHere
     setCompile
     compileHeader
-    ( Eventually I will write an assembler library and this raw machine code         )
-    ( will be replaced with what will appear to be readable assembly code RPN style  )
-    0xB3 c, 0x82 c, 0x49 c, 0x01 c, ( add	t0,s3,s4 )
-    0x23 c, 0xA0 c, 0x82 c, 0x00 c, ( sw	s0,0[t0] )
-    0x11 c, 0x0A c,                 ( addi	s4,s4,4  )
-    0x17 c, 0x04 c, 0x00 c, 0x00 c, ( auipc	s0,0x0   )
-    0x13 c, 0x04 c, 0x04 c, 0x01 c, ( mv	s0,s0    )
-    0x83 c, 0x22 c, 0x04 c, 0x00 c, ( lw	t0,0[s0] )
-    0xE7 c, 0x80 c, 0x02 c, 0x00 c, ( jalr	t0       )
+    4 alignHere
+    ( without no-ops this code would work in default qemu as it allows unaligned memory accesses.         )
+    ( note how this generated machine code jumps to the location directly after it, as compressed         )
+    ( format riscv instructions can be only 2 bytes long we have to pad with no-ops so the overall length )
+    ( of this block of machine code is divisible by 4                                                     )
+    0xB3 c, 0x82 c, 0x49 c, 0x01 c, ( add	t0,s3,s4         )
+    0x23 c, 0xA0 c, 0x82 c, 0x00 c, ( sw	s0,0[t0]         )
+    0x11 c, 0x0A c, 0x01 c, 0x00 c, ( addi	s4,s4,4; nop     )
+    0x17 c, 0x04 c, 0x00 c, 0x00 c, ( auipc	s0,0x0           ) 
+    0x41 c, 0x04 c, 0x01 c, 0x00 c, ( addi	s0,s0,16; nop    )
+    0x83 c, 0x2e c, 0x04 c, 0x00 c, ( lw	t0,0[s0]         )
+    0xE7 c, 0x80 c, 0x0e c, 0x00 c, ( jalr	t0               )
     4 alignHere
 ;
 

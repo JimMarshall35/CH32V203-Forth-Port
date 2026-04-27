@@ -61,6 +61,9 @@
 .global greaterThan_impl
 .global modulo_impl
 .global forth_mul_impl
+.global newline_impl
+.global forth_print_int_impl
+.global forth_div_impl
 
 .global vm_return_stack
 .global vm_data_stack
@@ -69,7 +72,7 @@
 .global last_vm_word
 
 #define VM_STACK_BOUNDS_CHECK
-.global title_string
+
 .global vm_flags
     # IMPORTANT! REGISTERS USED BY THE INTERPRETER:
 
@@ -111,8 +114,6 @@ show_data_stack_begin_str:   .ascii "data   [ \0"
 show_return_stack_begin_str: .ascii "return [ \0"
 show_comma_sep_str:          .ascii ", \0"
 show_stack_end_str:          .ascii " ]\n\r\0"
-
-title_string: .string "Risc V Forth\n"
 
 .balign 4
 
@@ -181,10 +182,6 @@ vm_run:
     la a0, starting_interpreter_string
     li a1, UART_BASE
     call puts
-# 1:
-#     j 1b
-
-    
 
     la a0, emit
     call find_dict_end
@@ -194,18 +191,12 @@ vm_run:
     sw a1, 0(t0)
     
 
-    # init stacks
+    # set interpreter variable registers
     la s1, vm_data_stack
     li s2, 0
     la s3, vm_return_stack
     li s4, 0
-
-    
-
     la s5, _dataEnd
-# 1:
-#     j 1b
-
     la s0, outerInterpreter_impl
 
     # DEBUG - PRINT IMPORTANT VM VARS
@@ -743,10 +734,34 @@ word_header modulo, "mod", 0, forth_mul, greaterThan
     PushDataStack t2
     end_word
 
-last_vm_word: # IMPORTANT: KEEP THIS LABEL POINTING TO THE LAST VM WORD.
-word_header forth_mul, "!*", 0, first_system_word, modulo
+word_header forth_mul, "!*", 0, forth_div, modulo
     PopDataStack t1
     PopDataStack t2
     mul t2, t2, t1
     PushDataStack t2
     end_word
+
+word_header forth_div, "/", 0, forth_print_int, forth_mul
+    PopDataStack t1
+    PopDataStack t2
+    div t2, t2, t1
+    PushDataStack t2
+    end_word
+
+word_header forth_print_int, ".", 0, newline, forth_div
+    PopDataStack a0
+    call print_int
+    end_word
+
+
+last_vm_word: # IMPORTANT: KEEP THIS LABEL POINTING TO THE LAST VM WORD.
+word_header newline, "cr", 0, first_system_word, forth_print_int
+    li a1, UART_BASE
+    li a0, 10
+    call putc
+    li a1, UART_BASE
+    li a0, 13
+    call putc
+    end_word
+
+

@@ -23,8 +23,6 @@
 /* Global typedef */
 
 /* Global define */
-#define RAM_END 0x20002000
-#define UART_BASE_CDEF 0x40004400
 
 /* Global Variable */
 const char* gTitleString = "RISC-V Forth CH32V203\n\r";
