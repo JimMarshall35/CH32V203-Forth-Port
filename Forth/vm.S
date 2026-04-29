@@ -748,20 +748,8 @@ word_header forth_div, "/", 0, forth_print_int, forth_mul
     PushDataStack t2
     end_word
 
-word_header forth_print_int, ".", 0, newline, forth_div
+last_vm_word: # IMPORTANT: KEEP THIS LABEL POINTING TO THE LAST VM WORD.
+word_header forth_print_int, ".", 0, first_system_word, forth_div
     PopDataStack a0
     call print_int
     end_word
-
-
-last_vm_word: # IMPORTANT: KEEP THIS LABEL POINTING TO THE LAST VM WORD.
-word_header newline, "cr", 0, first_system_word, forth_print_int
-    li a1, UART_BASE
-    li a0, 10
-    call putc
-    li a1, UART_BASE
-    li a0, 13
-    call putc
-    end_word
-
-
