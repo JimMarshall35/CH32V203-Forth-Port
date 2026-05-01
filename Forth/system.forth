@@ -460,7 +460,6 @@ asm_name ew
     enter_word_macro
     LiteralStr_ ' ,
     here 12 + ,
-    here show drop
     ReturnStr_ ' ,
     0 ,
     setDictionaryEnd
@@ -493,7 +492,7 @@ asm_name ew
     begin 
         dup                       ( does_code pThreadStart pThreadStart )
         @ ReturnStr_ ' = if         ( does_code pThreadStart )
-            dup JumpStr_ ' swap show ! 
+            dup JumpStr_ ' swap ! 
             4 + !
             r
         then
