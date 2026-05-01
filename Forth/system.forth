@@ -1,3 +1,8 @@
+( This is compiled into threaded code with a compiler written in python [see tools/Compiler.py] )
+( It is a non standard, non interactive forth compiler that bootstraps a real                  )
+( forth system running on the target riscv hardware. This python compiler for example has      )
+( control flow words baked into the implementation not done with immediate words, and also     )
+( has builtin words for variables and has a fake c preprocessor                                )
 #define CARRIAGE_RETURN_CHAR 13
 #define NEWLINE_CHAR 10
 #define ENTER_CHAR 127
@@ -353,20 +358,20 @@ asm_name cbyte
 ;
 
 : enter_word_macro ( -- ) 
-                                    ( push s0 to return stack            )
-    0xB3 c, 0x82 c, 0x49 c, 0x01 c, ( add	t0,s3,s4                     )
-    0x23 c, 0xA0 c, 0x82 c, 0x00 c, ( sw	s0,0[t0]                     )
-    0x11 c, 0x0A c,                 ( addi	s4,s4,4                      )
-                                    ( set s0 to point to start of thread )
-    0x17 c, 0x04 c, 0x00 c, 0x00 c, ( auipc	s0,0x0                       ) 
-    0x39 c, 0x04 c,                 ( addi	s0,s0, 14                    )
-                                    ( jump into first word in thread     )
-    0x83 c, 0x2e c, 0x04 c, 0x00 c, ( lw	t0,0[s0]                     )
-    0xE7 c, 0x80 c, 0x0e c, 0x00 c, ( jalr	t0                           )
+    ( Implementation is for COMPRESSED INSTRUCTION FORMAT RISC-V            )
+                                    ( 1. push s0 to return stack            )
+    0xB3 c, 0x82 c, 0x49 c, 0x01 c, (      add	t0,s3,s4                    )
+    0x23 c, 0xA0 c, 0x82 c, 0x00 c, (      sw	s0,0[t0]                    )
+    0x11 c, 0x0A c,                 (      addi	s4,s4,4                     )
+                                    ( 2. set s0 to point to start of thread )
+    0x17 c, 0x04 c, 0x00 c, 0x00 c, (      auipc	s0,0x0                  ) 
+    0x39 c, 0x04 c,                 (      addi	s0,s0, 14                   )
+                                    ( 3. jump into first word in thread     )
+    0x83 c, 0x2e c, 0x04 c, 0x00 c, (      lw	t0,0[s0]                    )
+    0xE7 c, 0x80 c, 0x0e c, 0x00 c, (      jalr	t0                      )
 ;
 
 : : ( pHeader )
-    ( Implementation is for COMPRESSED INSTRUCTION FORMAT RISC-V )
     4 alignHere
     setCompile
     compileHeader                   
