@@ -12,6 +12,8 @@
   - Forth code for a 32bit riscv assembler in assembler.forth ( unused and incomplete )
 - ch32/
   - non portable code specific to the ch32v203G6, code to initialize the microcontroller clock and uart
+    - C code taken from https://github.com/openwch/ch32v20x/tree/main
+    - in time i hope to replace it with a much simpler and smaller asm implementation
 - tools/
   - python tools to initially compile forth into threaded code
     - Compiler.py - compile forth to threaded code
