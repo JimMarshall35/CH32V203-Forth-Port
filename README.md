@@ -1,4 +1,4 @@
-# A Forth for the CH32V203G6 micrcontroller
+# A Forth for the CH32V203G6 microcontroller
 
 - Forth/
   - The core assembly and forth code, should largely portable between different risc-v chips
