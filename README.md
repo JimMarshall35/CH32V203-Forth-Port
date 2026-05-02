@@ -1,5 +1,10 @@
 # A Forth for the CH32V203G6 microcontroller
 
+This is a forth written in assembly and forth for CH32 microcontroller. You can connect to it over uart using a usb serial adaptor and access a forth repl.
+It relies on a python script that compiles forth source code into threaded code, which bootstraps the forth interpreter and compiler.
+
+# Files
+
 - Forth/
   - The core assembly and forth code, should largely portable between different risc-v chips
     - Implementations of primitive words in vm.S
