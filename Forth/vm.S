@@ -774,7 +774,7 @@ word_header roll, "roll", 0, jump, shift_right
     add t1, s1, s2 # t1 = ptr end of stack
     addi t2, s1, 4 # t2 = read ptr
 1:
-    addi t3, t2, -4  # t3 = write ptr
+    addi t3, t2, -4 # t3 = write ptr
     lw t4, 0(t2)    # iteration stack value
     sw t4, 0(t3)    # store in "empty hole"
     addi t2, t2, 4  # advance read ptr
