@@ -13,6 +13,7 @@ serialport = "4"
 clap = { version = "4", features = ["derive"] }
 ratatui = "0.30" # Check for the latest version
 color-eyre = "0.6"
+regex = "1"
 
 # Read the optimization guideline for more details: https://ratatui.rs/recipes/apps/release-your-app/#optimizations
 [profile.release]

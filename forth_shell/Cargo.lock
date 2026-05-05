@@ -551,6 +551,7 @@ dependencies = [
  "color-eyre",
  "crossterm",
  "ratatui",
+ "regex",
  "serialport",
 ]
 

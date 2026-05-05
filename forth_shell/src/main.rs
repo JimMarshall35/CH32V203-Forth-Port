@@ -18,6 +18,7 @@ use serialport;
 
 use crate::device_connection_states::{DeviceConnectionState, DeviceConnectionStateImplementation};
 use crate::connected_state::ConnectedState;
+use crate::requesting_device_reset_state::RequestingDeviceResetState;
 
 #[derive(Parser, Debug, Clone)]
 #[command(version, about)]
@@ -66,6 +67,7 @@ struct App {
         - states 2 - 4 are implemeted as objects that implement DeviceConnectionStateImplementation
     */
     connected: Box<dyn DeviceConnectionStateImplementation>,
+    requesting_reset: Box<dyn DeviceConnectionStateImplementation>,
     args: Args,
     establishing_connection_next_state: DeviceConnectionState
 }
@@ -76,7 +78,9 @@ impl App {
         Self {
             port: None,
             connection_state: DeviceConnectionState::EstablishingSerialPortConnection,
+            // state implementations (se)
             connected: Box::new(ConnectedState::new(args)),
+            requesting_reset: Box::new(RequestingDeviceResetState::new()),
             args: args.clone(),
             establishing_connection_next_state: DeviceConnectionState::EstablishingSerialPortConnection
         }
@@ -97,7 +101,9 @@ impl App {
                 }
             },
             DeviceConnectionState::RequestingDeviceReset => {
-                
+                if let Some(port) = self.port.as_mut() {
+                    return self.requesting_reset.handle_input(port.as_mut());
+                }
             },
             DeviceConnectionState::InitialHandshake => {
                 
@@ -120,7 +126,7 @@ impl App {
                 {
                     Ok(port) => {
                         self.port = Some(port);
-                        self.establishing_connection_next_state = DeviceConnectionState::Connected;
+                        self.establishing_connection_next_state = DeviceConnectionState::RequestingDeviceReset;
                     }
                     Err(_) => {
                         self.establishing_connection_next_state = DeviceConnectionState::EstablishingSerialPortConnection;
@@ -128,6 +134,9 @@ impl App {
                 }
             },
             DeviceConnectionState::RequestingDeviceReset => {
+                if let Some(port) = self.port.as_mut() {
+                    self.requesting_reset.read_serial(port.as_mut());
+                }
 
             },
             DeviceConnectionState::InitialHandshake => {
@@ -155,7 +164,7 @@ impl App {
     fn next_state(&mut self) -> DeviceConnectionState {
         match self.connection_state {
             DeviceConnectionState::EstablishingSerialPortConnection => self.establishing_connection_next_state.clone(),
-            DeviceConnectionState::RequestingDeviceReset => DeviceConnectionState::RequestingDeviceReset,
+            DeviceConnectionState::RequestingDeviceReset => self.requesting_reset.next_state(),
             DeviceConnectionState::InitialHandshake => DeviceConnectionState::InitialHandshake,
             DeviceConnectionState::Connected => self.connected.next_state()
         }
@@ -175,7 +184,7 @@ impl App {
                 terminal.draw(|frame| self.render_establishing_connection_screen(frame));
             },
             DeviceConnectionState::RequestingDeviceReset => {
-
+                terminal.draw(|frame| self.requesting_reset.render(frame));
             },
             DeviceConnectionState::InitialHandshake => {
                 
@@ -202,7 +211,7 @@ impl App {
             if new_state != self.connection_state {
                 match self.connection_state {
                     DeviceConnectionState::EstablishingSerialPortConnection => self.on_exit_establish_serial_port_state(),
-                    DeviceConnectionState::RequestingDeviceReset => {},
+                    DeviceConnectionState::RequestingDeviceReset => self.requesting_reset.on_exit_state(),
                     DeviceConnectionState::InitialHandshake => {},
                     DeviceConnectionState::Connected => self.connected.on_exit_state(),
                     
@@ -210,7 +219,7 @@ impl App {
                 self.connection_state = new_state;
                 match self.connection_state {
                     DeviceConnectionState::EstablishingSerialPortConnection => self.on_enter_establish_serial_port_state(),
-                    DeviceConnectionState::RequestingDeviceReset => {},
+                    DeviceConnectionState::RequestingDeviceReset => self.requesting_reset.on_enter_state(),
                     DeviceConnectionState::InitialHandshake => {},
                     DeviceConnectionState::Connected => self.connected.on_enter_state(),
                     
