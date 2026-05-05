@@ -1,6 +1,8 @@
 mod connected_state;
 mod device_connection_states;
 mod requesting_device_reset_state;
+mod initial_handshake_state;
+mod forth_state;
 
 use color_eyre::Result;
 
@@ -19,6 +21,8 @@ use serialport;
 use crate::device_connection_states::{DeviceConnectionState, DeviceConnectionStateImplementation};
 use crate::connected_state::ConnectedState;
 use crate::requesting_device_reset_state::RequestingDeviceResetState;
+use crate::forth_state::ForthState;
+use crate::initial_handshake_state::InitialHandshakeState;
 
 #[derive(Parser, Debug, Clone)]
 #[command(version, about)]
@@ -35,9 +39,6 @@ fn main() -> Result<()> {
     color_eyre::install()?;
     ratatui::run(|terminal| App::new(&args).run(terminal))
 }
-
-
-
 
 /// App holds the state of the application
 struct App {
@@ -68,8 +69,10 @@ struct App {
     */
     connected: Box<dyn DeviceConnectionStateImplementation>,
     requesting_reset: Box<dyn DeviceConnectionStateImplementation>,
+    initial_handshake: Box<dyn DeviceConnectionStateImplementation>,
     args: Args,
-    establishing_connection_next_state: DeviceConnectionState
+    establishing_connection_next_state: DeviceConnectionState,
+    forth_state: ForthState,
 }
 
 
@@ -81,8 +84,10 @@ impl App {
             // state implementations (se)
             connected: Box::new(ConnectedState::new(args)),
             requesting_reset: Box::new(RequestingDeviceResetState::new()),
+            initial_handshake: Box::new(InitialHandshakeState::new()),
             args: args.clone(),
-            establishing_connection_next_state: DeviceConnectionState::EstablishingSerialPortConnection
+            establishing_connection_next_state: DeviceConnectionState::EstablishingSerialPortConnection,
+            forth_state: ForthState::new()
         }
     }
 
@@ -106,7 +111,9 @@ impl App {
                 }
             },
             DeviceConnectionState::InitialHandshake => {
-                
+                if let Some(port) = self.port.as_mut() {
+                    return self.initial_handshake.handle_input(port.as_mut());
+                }
             },
             DeviceConnectionState::Connected => {
                 if let Some(port) = self.port.as_mut() {
@@ -135,16 +142,18 @@ impl App {
             },
             DeviceConnectionState::RequestingDeviceReset => {
                 if let Some(port) = self.port.as_mut() {
-                    self.requesting_reset.read_serial(port.as_mut());
+                    self.requesting_reset.read_serial(port.as_mut(), &mut self.forth_state);
                 }
 
             },
             DeviceConnectionState::InitialHandshake => {
-                
+                if let Some(port) = self.port.as_mut() {
+                    return self.initial_handshake.read_serial(port.as_mut(), &mut self.forth_state);
+                }
             },
             DeviceConnectionState::Connected => {
                 if let Some(port) = self.port.as_mut() {
-                    self.connected.read_serial(port.as_mut());
+                    self.connected.read_serial(port.as_mut(), &mut self.forth_state);
                 }                
             }
         }
@@ -165,7 +174,7 @@ impl App {
         match self.connection_state {
             DeviceConnectionState::EstablishingSerialPortConnection => self.establishing_connection_next_state.clone(),
             DeviceConnectionState::RequestingDeviceReset => self.requesting_reset.next_state(),
-            DeviceConnectionState::InitialHandshake => DeviceConnectionState::InitialHandshake,
+            DeviceConnectionState::InitialHandshake => self.initial_handshake.next_state(),
             DeviceConnectionState::Connected => self.connected.next_state()
         }
     }
@@ -187,7 +196,7 @@ impl App {
                 terminal.draw(|frame| self.requesting_reset.render(frame));
             },
             DeviceConnectionState::InitialHandshake => {
-                
+                terminal.draw(|frame| self.initial_handshake.render(frame));
             },
             DeviceConnectionState::Connected => {
                 terminal.draw(|frame| self.connected.render(frame));
@@ -208,21 +217,22 @@ impl App {
             
             self.draw(terminal);
             let new_state = self.next_state();
+
             if new_state != self.connection_state {
                 match self.connection_state {
                     DeviceConnectionState::EstablishingSerialPortConnection => self.on_exit_establish_serial_port_state(),
                     DeviceConnectionState::RequestingDeviceReset => self.requesting_reset.on_exit_state(),
-                    DeviceConnectionState::InitialHandshake => {},
+                    DeviceConnectionState::InitialHandshake => self.initial_handshake.on_exit_state(),
                     DeviceConnectionState::Connected => self.connected.on_exit_state(),
                     
                 }
                 self.connection_state = new_state;
+                let r = self.port.as_mut().unwrap().as_mut();
                 match self.connection_state {
                     DeviceConnectionState::EstablishingSerialPortConnection => self.on_enter_establish_serial_port_state(),
-                    DeviceConnectionState::RequestingDeviceReset => self.requesting_reset.on_enter_state(),
-                    DeviceConnectionState::InitialHandshake => {},
-                    DeviceConnectionState::Connected => self.connected.on_enter_state(),
-                    
+                    DeviceConnectionState::RequestingDeviceReset => self.requesting_reset.on_enter_state(r, &mut self.forth_state),
+                    DeviceConnectionState::InitialHandshake => self.initial_handshake.on_enter_state(r, &mut self.forth_state),
+                    DeviceConnectionState::Connected => self.connected.on_enter_state(r, &mut self.forth_state),
                 }
             }
         }

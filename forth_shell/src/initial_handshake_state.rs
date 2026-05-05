@@ -1,28 +1,31 @@
 use crate::device_connection_states::DeviceConnectionStateImplementation;
-use crate::forth_state::ForthState;
+use crate::forth_state::{ForthState, ForthWord};
 use crossterm::event::{self, KeyCode, KeyEventKind};
 use std::time::Duration;
 use ratatui::widgets::{Block, Clear, Paragraph};
 use ratatui::layout::{Constraint, Layout};
 use regex::Regex;
 use crate::device_connection_states::DeviceConnectionState;
+use std::time::Instant;
 
-pub struct RequestingDeviceResetState {
+pub struct InitialHandshakeState {
     // data recieved from serial while in this state
     input: String,
-    next_state: DeviceConnectionState
+    next_state: DeviceConnectionState,
+    timer: Instant
 }
 
-impl RequestingDeviceResetState {
+impl InitialHandshakeState {
     pub fn new() -> Self {
         Self {
-            next_state: DeviceConnectionState::RequestingDeviceReset,
-            input: String::new()
+            next_state: DeviceConnectionState::InitialHandshake,
+            input: String::new(),
+            timer: Instant::now(),
         }
     }
 }
 
-impl DeviceConnectionStateImplementation for RequestingDeviceResetState {
+impl DeviceConnectionStateImplementation for InitialHandshakeState {
     fn handle_input(&mut self, port: &mut dyn serialport::SerialPort) -> bool {
         if event::poll(Duration::from_millis(30)).unwrap() {
             if let Some(key) = event::read().unwrap().as_key_press_event() {
@@ -34,6 +37,7 @@ impl DeviceConnectionStateImplementation for RequestingDeviceResetState {
                 }
             }
         }
+        
         return false;
     }
 
@@ -44,33 +48,28 @@ impl DeviceConnectionStateImplementation for RequestingDeviceResetState {
                 for i in 0..value {
                     self.input.push(buf[i] as char);
                 }
-
-                let regex_patterns = [
-                    Regex::new(r"data stack base:\s*(0x[0-9A-Fa-f]{8})").unwrap(),
-                    Regex::new(r"return stack base:\s*(0x[0-9A-Fa-f]{8})").unwrap(),
-                    Regex::new(r"instruction ptr:\s*(0x[0-9A-Fa-f]{8})").unwrap(),
-                    Regex::new(r"memory end:\s*(0x[0-9A-Fa-f]{8})").unwrap(),
-                    Regex::new(r"dict end:\s*(0x[0-9A-Fa-f]{8})").unwrap(),
-                ];
-                let mut matches = 0;
-                let len = regex_patterns.len();
-
-                let s: String = self.input.chars().collect();
-                for r in regex_patterns {
-                    if let Some(caps) = r.captures(&s) {
-                        let value = caps.get(1).unwrap().as_str();
-                        matches += 1;
-                    }
-                }
-                if matches == len {
-                    self.next_state = DeviceConnectionState::InitialHandshake;
-                }
-
             }
             Err(ref e) if e.kind() == std::io::ErrorKind::TimedOut => {
                 // no data available right now
             }
             Err(e) => {
+                self.next_state = DeviceConnectionState::EstablishingSerialPortConnection;
+            }
+        }
+        let elapsed = self.timer.elapsed().as_millis();
+        if elapsed > 2000 {
+            // showword should have finished
+            let lines = self.input.lines().skip(1);
+            for line in lines {
+                let tokens: Vec<&str> = line.trim().split_whitespace().collect();
+                
+                let addr: u32 = u32::from_str_radix(tokens[0].trim_start_matches("0x"), 16).unwrap();
+                forth_state.words.insert(tokens[1].to_string(), ForthWord { name: tokens[1].to_string(), address: addr});
+            }
+            if forth_state.words.len() > 0 {
+                self.next_state = DeviceConnectionState::Connected;
+            }
+            else {
                 self.next_state = DeviceConnectionState::EstablishingSerialPortConnection;
             }
         }
@@ -82,13 +81,17 @@ impl DeviceConnectionStateImplementation for RequestingDeviceResetState {
         let centered_area = area.centered(Constraint::Percentage(60), Constraint::Percentage(20));
         // clears out any background in the area before rendering the popup
         frame.render_widget(Clear, centered_area);
-        let paragraph = Paragraph::new("Please  press reset on MCU").block(popup_block);
+        let paragraph = Paragraph::new("Requesting Data From MCU").block(popup_block);
         frame.render_widget(paragraph, centered_area);
     }
 
-    fn on_enter_state(&mut self, port:&mut dyn serialport::SerialPort, forth_state: &mut ForthState) {
-        self.next_state = DeviceConnectionState::RequestingDeviceReset;
+    fn on_enter_state(&mut self, port: &mut dyn serialport::SerialPort, forth_state: &mut ForthState) {
+        self.next_state = DeviceConnectionState::InitialHandshake;
         self.input.clear();
+        let cmd = "showWords\r";
+        self.timer = Instant::now();
+        port.write(cmd.as_bytes());
+        forth_state.words.clear();
     }
 
     fn on_exit_state(&mut self) {
@@ -99,4 +102,3 @@ impl DeviceConnectionStateImplementation for RequestingDeviceResetState {
         return self.next_state.clone();
     }
 }
-

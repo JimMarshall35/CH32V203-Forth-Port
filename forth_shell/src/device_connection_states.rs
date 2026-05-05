@@ -1,6 +1,8 @@
 use ratatui::{Frame};
 use serialport::{SerialPort};
 
+use crate::forth_state::ForthState;
+
 #[derive(Clone, PartialEq, Eq)]
 
 pub enum DeviceConnectionState {
@@ -15,10 +17,10 @@ pub trait DeviceConnectionStateImplementation {
     fn handle_input(&mut self, port: &mut dyn SerialPort) -> bool;
 
     /// returned bool == was there a problem with serial reads
-    fn read_serial(&mut self, port:&mut dyn SerialPort);
+    fn read_serial(&mut self, port:&mut dyn SerialPort, forth_state: &mut ForthState);
     fn render(&mut self, frame: &mut Frame);
 
-    fn on_enter_state(&mut self);
+    fn on_enter_state(&mut self, port: &mut dyn SerialPort, forth_state: &mut ForthState);
 
     fn on_exit_state(&mut self);
 

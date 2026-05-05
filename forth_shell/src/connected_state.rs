@@ -9,6 +9,7 @@ use ratatui::{Frame};
 
 use crate::device_connection_states::{DeviceConnectionState, DeviceConnectionStateImplementation};
 use crate::Args;
+use crate::forth_state::ForthState;
 
 enum InputMode {
     Normal,
@@ -163,7 +164,7 @@ impl DeviceConnectionStateImplementation for ConnectedState {
         return false;
     }
     
-    fn read_serial(&mut self, mut port: &mut dyn serialport::SerialPort) {
+    fn read_serial(&mut self, mut port: &mut dyn serialport::SerialPort, forth_state: &mut ForthState) {
         let mut buf: [u8; 128] = [0; 128];
         match port.read(buf.as_mut_slice()) {
             Ok(value) => {
@@ -252,7 +253,7 @@ impl DeviceConnectionStateImplementation for ConnectedState {
         frame.render_widget(messages, inner_chunks[1]);
     }
 
-    fn on_enter_state(&mut self) {
+    fn on_enter_state(&mut self, port: &mut dyn serialport::SerialPort, forth_state: &mut ForthState) {
         self.input.clear();
         self.scroll_serialterm = 0;
         self.character_x = 0;
