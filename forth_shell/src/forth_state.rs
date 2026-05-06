@@ -6,6 +6,7 @@ use serialport::new;
 pub struct ForthWord {
     pub name: String,
     pub address: u32,
+    pub address_string: String
 }
 
 pub struct ForthState {

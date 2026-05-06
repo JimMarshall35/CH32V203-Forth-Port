@@ -1,6 +1,7 @@
 use crate::device_connection_states::DeviceConnectionStateImplementation;
 use crate::forth_state::{ForthState, ForthWord};
 use crossterm::event::{self, KeyCode, KeyEventKind};
+use std::fmt::format;
 use std::time::Duration;
 use ratatui::widgets::{Block, Clear, Paragraph};
 use ratatui::layout::{Constraint, Layout};
@@ -63,7 +64,7 @@ impl DeviceConnectionStateImplementation for InitialHandshakeState {
             for line in lines {
                 let tokens: Vec<&str> = line.trim().split_whitespace().collect();
                 let addr: u32 = u32::from_str_radix(tokens[0].trim_start_matches("0x"), 16).unwrap();
-                forth_state.words.insert(tokens[1].to_string(), ForthWord { name: tokens[1].to_string(), address: addr});
+                forth_state.words.insert(tokens[1].to_string(), ForthWord { name: tokens[1].to_string(), address: addr, address_string: format!("{:#010x}", addr)});
             }
             if forth_state.words.len() > 0 {
                 self.next_state = DeviceConnectionState::Connected;
