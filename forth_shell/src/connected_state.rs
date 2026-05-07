@@ -14,6 +14,7 @@ use crate::forth_state::ForthState;
 enum InputMode {
     Normal,
     Editing,
+    ScrollingWords
 }
 
 pub struct ConnectedState {
@@ -27,7 +28,8 @@ pub struct ConnectedState {
     scroll_serialterm: u16,
     serialtermHeight: u16,
     next_state: DeviceConnectionState,
-    dictionary_list_state: TableState
+    dictionary_list_state: TableState,
+    num_words: usize
 }
 
 impl ConnectedState {
@@ -41,7 +43,8 @@ impl ConnectedState {
             scroll_serialterm: 0,
             serialtermHeight: 0,
             next_state: DeviceConnectionState::Connected,
-            dictionary_list_state: TableState::default()
+            dictionary_list_state: TableState::default(),
+            num_words: 0
         }
     }
 
@@ -93,7 +96,9 @@ impl ConnectedState {
                     "q".bold(),
                     " to exit, ".into(),
                     "e".bold(),
-                    " to start editing.".bold(),
+                    " to start editing, ".bold(),
+                    "d".bold(),
+                    " to scroll dictionary.".bold(),
                 ],
                 Style::default().add_modifier(Modifier::RAPID_BLINK),
             ),
@@ -107,6 +112,14 @@ impl ConnectedState {
                 ],
                 Style::default(),
             ),
+            InputMode::ScrollingWords => (
+                vec![
+                    "Press ".into(),
+                    "Esc".bold(),
+                    " to stop scrolling, ".into()
+                ],
+                Style::default()
+            )
         }
     }
 }
@@ -120,6 +133,12 @@ impl DeviceConnectionStateImplementation for ConnectedState {
                     InputMode::Normal => match key.code {
                         KeyCode::Char('e') => {
                             self.input_mode = InputMode::Editing;
+                        }
+                        KeyCode::Char('d') => {
+                            if self.dictionary_list_state.selected() == None {
+                                self.dictionary_list_state.select(Some(0));
+                            }
+                            self.input_mode = InputMode::ScrollingWords;
                         }
                         KeyCode::Char('q') => {
                             return true;
@@ -159,11 +178,34 @@ impl DeviceConnectionStateImplementation for ConnectedState {
                         KeyCode::Esc => self.input_mode = InputMode::Normal,
                         _ => {}
                     },
-                    InputMode::Editing => {}
+                    InputMode::ScrollingWords => match key.code {
+                        KeyCode::Esc => self.input_mode = InputMode::Normal,
+                        KeyCode::Char('q') => {
+                            return true;
+                        },
+                        KeyCode::Up => {
+                            match self.dictionary_list_state.selected() {
+                                Some(x) if x == 0 => {}
+                                Some(x) => { self.dictionary_list_state.select(Some(x - 1)); }
+                                _ => {}
+                            }      
+                            return false;
+                        }
+                        KeyCode::Down => {
+                            match self.dictionary_list_state.selected() {
+                                Some(i) if i >= self.num_words - 1 => {},
+                                Some(x) => { self.dictionary_list_state.select(Some(x + 1)); }
+                                _ => {}
+                            }      
+                            return false;
+                        }
+                        _ => {}
+                    },
+                    _ => {}
                 }
             }
         }
-        return false;
+        false
     }
     
     fn read_serial(&mut self, mut port: &mut dyn serialport::SerialPort, forth_state: &mut ForthState) {
@@ -233,6 +275,7 @@ impl DeviceConnectionStateImplementation for ConnectedState {
             .style(match self.input_mode {
                 InputMode::Normal => Style::default(),
                 InputMode::Editing => Style::default().fg(Color::Yellow),
+                InputMode::ScrollingWords => Style::default()
             })
             .block(Block::bordered().title("Input"))
             .scroll((self.scroll_serialterm, 0));
@@ -248,6 +291,7 @@ impl DeviceConnectionStateImplementation for ConnectedState {
                 // Move one line down, from the border to the input line
                 inner_chunks[0].y + self.character_y as u16 + 1,
             )),
+            InputMode::ScrollingWords => {}
         }
 
         let mut rows: Vec<Row> = vec![];
@@ -255,12 +299,18 @@ impl DeviceConnectionStateImplementation for ConnectedState {
         for (key, value) in forth_state.words.iter() {
             rows.push(Row::new(vec![key as &str, &value.address_string as &str]));
         }
+        self.num_words = rows.len();
         let widths = [
             Constraint::Percentage(50),
             Constraint::Percentage(50),
         ];
         let table = Table::new(rows, widths)
-            .block(Block::new().title("Words"))
+            .block(Block::bordered().title("Words"))
+            .style(match self.input_mode {
+                InputMode::Normal => Style::default(),
+                InputMode::Editing => Style::default(),
+                InputMode::ScrollingWords => Style::default().fg(Color::Yellow)
+            })
             .row_highlight_style(Style::new().reversed())
             .highlight_symbol(">>");
 
