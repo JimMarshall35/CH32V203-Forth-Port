@@ -25,6 +25,8 @@
 
 #define SECONDARY_WORD_MACRO_CODE_SIZE 24
 
+#define RAM_START 0x20000000
+
 buf LineBuffer_ 128
 var LineBufferSize_ 0
 
@@ -177,11 +179,15 @@ asm_name lte
 
 : setHeaderImmediate ( bImm pHeader -- ) OFFSET_IMM + ! ;
 
-: getHeaderImmediate ( pHeader -- pHeader->bImmediate ) OFFSET_IMM + @ ; 
+: getHeaderImmediate ( pHeader -- pHeader->bImmediate ) OFFSET_IMM + @ 1 & ; 
+
+: getHeaderIsPrmitive ( pHeader -- pHeader->bPrimitive ) OFFSET_IMM + @ 2 & ; 
 
 : getXTHeader ( xt -- xtHeader ) HEADER_SIZE - ; 
 
 : getXTImmediate ( xt -- 0IfNotImmediate ) getXTHeader getHeaderImmediate ;
+
+: ptrInRam ( ptr -- isInRam ) RAM_START >= ;
 
 : tokenBufferToHeaderCode ( buffer -- ) TokenBufferSize_ @ swap Tokenbuffer_ swap toCString ;
 
@@ -467,15 +473,32 @@ asm_name ew
     drop
 ;
 
+: memoryDump ( end begin -- )
+    begin
+        dup @ . cr
+        4 +
+        2dup swap >=
+    until
+    drop drop 
+;
+
+
 : showWords
-    getDictionaryEnd   ( pEnd pEnd )
+    here 
+    getDictionaryEnd   ( here pEnd )
     begin
         dup
-        dup . SPACE_CHAR emit printc cr              ( pEnd ) 
-        getHeaderPrev                                ( pEnd->prev ) 
-        dup 0 =                                      ( pEnd->prev pEnd->prev==0 )
+        dup . SPACE_CHAR emit printc cr              ( here pEnd ) 
+        ( print contents of word )
+        2dup ptrInRam swap ptrInRam = if             ( here pEnd )
+            ( both ptrs in same region )
+            2dup memoryDump                              ( here pEnd ) 
+        then
+        swap drop dup                                ( pEnd pEnd )
+        getHeaderPrev                                ( pEnd pEnd->prev ) 
+        dup 0 =                                      ( pEnd pEnd->prev pEnd->prev==0 )
     until
-    drop
+    drop drop 
 ;
 
 : do_does> ( does_code -- )

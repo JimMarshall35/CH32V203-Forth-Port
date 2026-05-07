@@ -1,3 +1,5 @@
+.global PRIMITIVE_WORD_BITMASK
+
 .equ UART_BASE2, 0x40004400
 .equ CELL_SIZE, 4
 .equ DATA_STACK_MAX_SIZE, 32
@@ -22,6 +24,7 @@
 .equ FIND_TOKEN_ERROR_BIT, 4
 .equ NUM_IO_HEX_BIT, 8   # if not set, num io is decimal
 
+.equ PRIMITIVE_WORD_BITMASK, 2
 
 .macro StackSizeElements regSize, regTemp, regOut
 li \regTemp, CELL_SIZE
@@ -84,10 +87,10 @@ div \regOut, \regSize, \regTemp
 #     char code[HEADER_CODE_BUF_SIZE];       // the code you write when you write forth 
 #     struct Header* next;
 #     struct Header* prev;
-#     Cell bImmediate;
+#     Cell bflags;
 # }
 
-.macro word_header_unitialised name, code, immediate
+.macro word_header_unitialised name, code, flags
     .balign 4
 \name:
     #padded_string \code, HEADER_CODE_BUF_SIZE
@@ -103,33 +106,33 @@ div \regOut, \regSize, \regTemp
     .endif
     .word 0
     .word 0
-    .word \immediate
+    .word \flags
 \name\()_impl:
 .endm
 
-.macro word_header_last name, code, immediate, prev
+.macro word_header_last name, code, flags, prev
     .balign 4
 \name:
     padded_string \code, HEADER_CODE_BUF_SIZE
     .word 0
     .word \prev
-    .word \immediate
+    .word \flags
 \name\()_impl:
 .endm
 
 
-.macro word_header_first name, code, immediate, next
+.macro word_header_first name, code, flags, next
     .balign 4
 \name:
     padded_string \code, HEADER_CODE_BUF_SIZE
     .word \next
     .word 0
-    .word \immediate
+    .word \flags
     .balign 4
 \name\()_impl:
 .endm
 
-.macro word_header name, code, immediate, next, prev
+.macro word_header name, code, flags, next, prev
     .balign 4
 \name:
     #padded_string \code, HEADER_CODE_BUF_SIZE
@@ -145,7 +148,7 @@ div \regOut, \regSize, \regTemp
     .endif
     .word \next
     .word \prev
-    .word \immediate
+    .word \flags
     .balign 4
 \name\()_impl:
 .endm

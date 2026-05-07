@@ -11,6 +11,16 @@ use crate::device_connection_states::{DeviceConnectionState, DeviceConnectionSta
 use crate::Args;
 use crate::forth_state::ForthState;
 
+const banner: &str = "
+    ██████                      █████    █████                        █████               ████  ████ 
+   ███░░███                    ░░███    ░░███                        ░░███               ░░███ ░░███ 
+  ░███ ░░░   ██████  ████████  ███████   ░███████              █████  ░███████    ██████  ░███  ░███ 
+ ███████    ███░░███░░███░░███░░░███░    ░███░░███            ███░░   ░███░░███  ███░░███ ░███  ░███ 
+░░░███░    ░███ ░███ ░███ ░░░   ░███     ░███ ░███           ░░█████  ░███ ░███ ░███████  ░███  ░███ 
+  ░███     ░███ ░███ ░███       ░███ ███ ░███ ░███            ░░░░███ ░███ ░███ ░███░░░   ░███  ░███ 
+  █████    ░░██████  █████      ░░█████  ████ █████ █████████ ██████  ████ █████░░██████  █████ █████
+ ░░░░░      ░░░░░░  ░░░░░        ░░░░░  ░░░░ ░░░░░ ░░░░░░░░░ ░░░░░░  ░░░░ ░░░░░  ░░░░░░  ░░░░░ ░░░░░ ";
+
 enum InputMode {
     Normal,
     Editing,
@@ -236,9 +246,11 @@ impl DeviceConnectionStateImplementation for ConnectedState {
     }
 
     fn render(&mut self, frame: &mut Frame, forth_state: &ForthState) {
+        let banner_height = banner.lines().count() as u16;
         let outer_chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
+                Constraint::Length(banner_height),
                 Constraint::Length(1),
                 Constraint::Min(0),
             ])
@@ -250,7 +262,7 @@ impl DeviceConnectionStateImplementation for ConnectedState {
                 Constraint::Percentage(70),
                 Constraint::Percentage(30),
             ])
-            .split(outer_chunks[1]);
+            .split(outer_chunks[2]);
 
         let (msg, style) = self.get_top_msg();
         let mut inputCpy = self.input.clone();
@@ -267,9 +279,13 @@ impl DeviceConnectionStateImplementation for ConnectedState {
             self.scroll_serialterm = 0;
         }
 
+        let banner_text = Text::from(banner).style(Style::default().fg(Color::Green));
+        let banner_p = Paragraph::new(banner_text);
+        frame.render_widget(banner_p, outer_chunks[0]);
+
         let text = Text::from(Line::from(msg)).patch_style(style);
         let help_message = Paragraph::new(text);
-        frame.render_widget(help_message, outer_chunks[0]);
+        frame.render_widget(help_message, outer_chunks[1]);
 
         let input = Paragraph::new(self.input.as_str())
             .style(match self.input_mode {

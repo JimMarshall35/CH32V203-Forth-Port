@@ -4,3 +4,4 @@
 *.map
 forth_shell/target
 tools/__pycache__
+Forth/system.S
