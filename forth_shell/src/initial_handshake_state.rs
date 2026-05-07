@@ -8,6 +8,7 @@ use ratatui::layout::{Constraint, Layout};
 use regex::Regex;
 use crate::device_connection_states::DeviceConnectionState;
 use std::time::Instant;
+use crate::showWords_parser::parse_showWords;
 
 pub struct InitialHandshakeState {
     // data recieved from serial while in this state
@@ -43,7 +44,8 @@ impl DeviceConnectionStateImplementation for InitialHandshakeState {
     }
 
     fn read_serial(&mut self, port:&mut dyn serialport::SerialPort, forth_state: &mut ForthState) {
-        let mut buf: [u8; 128] = [0; 128];
+        let mut buf: [u8; 64000] = [0; 64000];
+        let mut done = false;
         match port.read(buf.as_mut_slice()) {
             Ok(value) => {
                 for i in 0..value {
@@ -52,20 +54,17 @@ impl DeviceConnectionStateImplementation for InitialHandshakeState {
             }
             Err(ref e) if e.kind() == std::io::ErrorKind::TimedOut => {
                 // no data available right now
+                done = true;
             }
             Err(e) => {
                 self.next_state = DeviceConnectionState::EstablishingSerialPortConnection;
             }
         }
         let elapsed = self.timer.elapsed().as_millis();
-        if elapsed > 2000 {
+        if done {
             // showword should have finished
             let lines = self.input.lines().skip(1);
-            for line in lines {
-                let tokens: Vec<&str> = line.trim().split_whitespace().collect();
-                let addr: u32 = u32::from_str_radix(tokens[0].trim_start_matches("0x"), 16).unwrap();
-                forth_state.words.insert(tokens[1].to_string(), ForthWord { name: tokens[1].to_string(), address: addr, address_string: format!("{:#010x}", addr)});
-            }
+            parse_showWords(lines, forth_state);
             if forth_state.words.len() > 0 {
                 self.next_state = DeviceConnectionState::Connected;
             }

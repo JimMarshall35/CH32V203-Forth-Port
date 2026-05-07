@@ -3,6 +3,7 @@ mod device_connection_states;
 mod requesting_device_reset_state;
 mod initial_handshake_state;
 mod forth_state;
+mod showWords_parser;
 
 use color_eyre::Result;
 
