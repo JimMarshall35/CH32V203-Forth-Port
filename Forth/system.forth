@@ -482,6 +482,16 @@ asm_name ew
     drop drop 
 ;
 
+: showLastWord
+    here
+    getDictionaryEnd   ( here pEnd )
+    dup
+    dup . SPACE_CHAR emit printc SPACE_CHAR emit  ( here pEnd ) 
+    dup getHeaderImmediate .  SPACE_CHAR emit         ( here pEnd ) 
+    dup getHeaderIsPrmitive . cr                      ( here pEnd ) 
+    memoryDump
+;
+
 
 : showWords
     here 

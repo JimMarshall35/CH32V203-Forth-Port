@@ -111,9 +111,9 @@ impl ConnectedState {
                     "q".bold(),
                     " to exit, ".into(),
                     "e".bold(),
-                    " to start editing, ".bold(),
+                    " to start editing, ".into(),
                     "d".bold(),
-                    " to scroll dictionary. ".bold()
+                    " to scroll dictionary. ".into()
                 ],
                 Style::default().add_modifier(Modifier::RAPID_BLINK),
             ),
