@@ -679,8 +679,6 @@ buf pageBuffer 256
     loop
 ;
 
-( flash the first word to exist in RAM into flash )
-
 : findFirstRAMWord ( -- firstWordInRam )
     getDictionaryEnd
     begin
@@ -692,7 +690,58 @@ buf pageBuffer 256
     until
 ;
 
+#define FLASH_FREE_START_DATA_SECTION_OFFSET_CELLS 1
+
+: find_word_end ( pHeader -- pEndOfWord )
+    getDictionaryEnd
+    begin
+        2dup getHeaderPrev = if
+            swap drop
+            r
+        then
+        getHeaderPrev
+        0
+    until
+;
+
+: cpyCells ( pDst pSrc numCells --  )
+    0 do
+        2dup i cells + swap i cells + swap
+        ( pDst pSrc )
+        @ swap !
+    loop
+    drop drop 
+;
+
+: offsetFromPage ( ptr -- offsetFromPage )
+    dup pageAddress swap -
+;
+
+( flash the first word to exist in RAM into flash )
 : flash 
-    findFirstRAMWord dup getHeaderPrev ( firstRamWord lastFlashWord )
+    findFirstRAMWord ( firstRamWord )
+    FORTH_DATA_SECTION FLASH_FREE_START_DATA_SECTION_OFFSET_CELLS cells + @  ( get a pointer to the start of the free flash memory region )
+    ( firstRamWord pFreeFlashPtr )
+    dup pageAddress copyPageToBuffer           ( copy flash page to ram, we must preserve anything else that's on the same page before the new word )
+                                               ( firstRamWord pFreeFlashPtr )
+    dup offsetFromPagepageBuffer +
+                                               ( firstRamWord pFreeFlashPtr pWrite )
+    roll                                       ( pFreeFlashPtr pWrite firstRamWord )
+    swap                                       ( pFreeFlashPtr firstRamWord pWrite )
+    dup
+    pageBuffer 256 +                           ( pFreeFlashPtr firstRamWord pWrite pWrite pageBufferEnd )
+    swap - CELL_SIZE /                         ( pFreeFlashPtr firstRamWord pWrite freeCellsInBuffer )
+    dup >R
+    rot swap                                   ( pFreeFlashPtr pWrite firstRamWord freeCellsInBuffer )
+    cpyCells                                   ( pFreeFlashPtr )
+
+    dup pageAddress erasePage
+    dup pageAddress flashPageBuffer
+    256 +
+    findFirstRAMWord
+    dup find_word_end swap - CELL_SIZE /       ( pFreeFlashPtr totalWordSize )
+    <R -                                       ( pFreeFlashPtr remainingWords )
+
+
     
 ;
